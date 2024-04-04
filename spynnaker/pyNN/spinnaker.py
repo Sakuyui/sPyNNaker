@@ -169,6 +169,9 @@ class SpiNNaker(AbstractSpinnakerBase, pynn_control.BaseState):
         # Build data
         self._clear_and_run(tstop - self.t)
 
+    def setup_optimization_configuration(self, optimization_configuration:dict):
+        super().setup_optimization_configuration(optimization_configuration)
+
     def clear(self) -> None:
         """
         Clear the current recordings and reset the simulation.
@@ -194,6 +197,7 @@ class SpiNNaker(AbstractSpinnakerBase, pynn_control.BaseState):
 
         # Call superclass implementation
         AbstractSpinnakerBase.reset(self)
+
 
     @property
     def state(self) -> 'SpiNNaker':
