@@ -190,7 +190,9 @@ __all__ = [
     'Projection',
     'get_current_time', 'create', 'connect', 'get_time_step', 'get_min_delay',
     'get_max_delay', 'initialize', 'list_standard_models', 'name',
-    'record', "get_machine"]
+    'record', 'get_machine',
+    'setup_optimization_configuration'
+    ]
 
 
 class __PynnOperations(TypedDict, total=False):
@@ -390,6 +392,8 @@ def _create_overloaded_functions(spinnaker_simulator: SpiNNaker):
     # phase.
     __pynn["run"], __pynn["run_until"] = pynn_common.build_run(
         spinnaker_simulator)
+    
+    __pynn["setup_optimization_configuration"] = pynn_common.build_configurate(spinnaker_simulator)
 
     __pynn["get_current_time"], __pynn["get_time_step"], \
         __pynn["get_min_delay"], __pynn["get_max_delay"], \
@@ -667,6 +671,9 @@ def run(simtime: float, callbacks=None) -> float:
     SpynnakerDataView.check_user_can_act()
     return __pynn["run"](simtime, callbacks)
 
+def setup_optimization_configuration(optimization_configuration:dict) -> None:
+    SpynnakerDataView.check_user_can_act()
+    __pynn["setup_optimization_configuration"](optimization_configuration)
 
 # left here because needs to be done, and no better place to put it
 # (ABS don't like it, but will put up with it)

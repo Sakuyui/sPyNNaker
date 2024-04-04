@@ -148,6 +148,7 @@ class SpiNNaker(AbstractSpinnakerBase, pynn_control.BaseState):
         super(SpiNNaker, self).run(run_time, sync_time)
 
         # PyNNaker specific algorithms to do after finishing a run
+
         self.__flush_post_vertex_caches()
 
     def __flush_post_vertex_caches(self) -> None:
@@ -171,6 +172,9 @@ class SpiNNaker(AbstractSpinnakerBase, pynn_control.BaseState):
         """
         # Build data
         self._clear_and_run(tstop - self.t)
+
+    def setup_optimization_configuration(self, optimization_configuration:dict):
+        super().setup_optimization_configuration(optimization_configuration)
 
     def clear(self) -> None:
         """
@@ -197,6 +201,7 @@ class SpiNNaker(AbstractSpinnakerBase, pynn_control.BaseState):
 
         # Call superclass implementation
         AbstractSpinnakerBase.reset(self)
+
 
     @property
     def state(self) -> 'SpiNNaker':
