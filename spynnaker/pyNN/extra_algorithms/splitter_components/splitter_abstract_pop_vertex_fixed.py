@@ -82,7 +82,7 @@ class SplitterAbstractPopulationVertexFixed(
 
         self.__create_slices()
 
-        max_atoms_per_core = min(app_vertex.get_max_atoms_per_core(), app_vertex.n_atoms)
+        max_atoms_per_core = app_vertex.n_atoms # min(app_vertex.get_max_atoms_per_core(), app_vertex.n_atoms)
 
         ring_buffer_shifts = app_vertex.get_ring_buffer_shifts()
         weight_scales = app_vertex.get_weight_scales(ring_buffer_shifts)
