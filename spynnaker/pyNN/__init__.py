@@ -179,7 +179,8 @@ __all__ = [
     'get_current_time', 'create', 'connect', 'get_time_step', 'get_min_delay',
     'get_max_delay', 'initialize', 'list_standard_models', 'name',
     'record', 'record_v', 'record_gsyn', "get_machine",
-    'setup_optimization_configuration'
+    'setup_optimization_configuration',
+    'setup_evaluation_configuration'
 ]
 
 # Dynamically-extracted operations from PyNN
@@ -351,8 +352,9 @@ def _create_overloaded_functions(spinnaker_simulator):
     __pynn["run"], __pynn["run_until"] = pynn_common.build_run(
         spinnaker_simulator)
     
-    __pynn["setup_optimization_configuration"] = pynn_common.build_configurate(spinnaker_simulator)
-
+    __pynn["setup_optimization_configuration"] = pynn_common.build_optimization_configuration(spinnaker_simulator)
+    __pynn["setup_evaluation_configuration"] = pynn_common.build_evaluation_configuration(spinnaker_simulator)
+    
     __pynn["get_current_time"], __pynn["get_time_step"], \
         __pynn["get_min_delay"], __pynn["get_max_delay"], \
         __pynn["num_processes"], __pynn["rank"] = \
@@ -680,6 +682,11 @@ def setup_optimization_configuration(optimization_configuration:dict) -> None:
     SpynnakerDataView.check_user_can_act()
     __pynn["setup_optimization_configuration"](optimization_configuration)
 
+    
+def setup_evaluation_configuration(evaluation_configuration:dict) -> None:
+    SpynnakerDataView.check_user_can_act()
+    __pynn["setup_evaluation_configuration"](evaluation_configuration)
+    
 def get_machine():
     """
     Get the SpiNNaker machine in use.

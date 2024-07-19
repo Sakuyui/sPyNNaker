@@ -164,6 +164,9 @@ class SpiNNaker(AbstractSpinnakerBase, pynn_control.BaseState):
     def setup_optimization_configuration(self, optimization_configuration:dict):
         super().setup_optimization_configuration(optimization_configuration)
         
+    def setup_evaluation_configuration(self, evaluation_configuration:dict):
+        super().setup_evaluation_configuration(evaluation_configuration)
+        
     def clear(self):
         """
         Clear the current recordings and reset the simulation.

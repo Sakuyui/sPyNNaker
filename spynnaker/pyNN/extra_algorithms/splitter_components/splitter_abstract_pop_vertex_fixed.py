@@ -36,6 +36,7 @@ from spynnaker.pyNN.models.utility_models.delays import DelayExtensionVertex
 from spynnaker.pyNN.models.neuron.synaptic_matrices import SynapticMatrices
 from spynnaker.pyNN.models.neuron.neuron_data import NeuronData
 from .abstract_spynnaker_splitter_delay import AbstractSpynnakerSplitterDelay
+from pacman.model.graphs.common import Slice
 
 # The maximum number of bits for the ring buffer index that are likely to
 # fit in DTCM (14-bits = 16,384 16-bit ring buffer entries = 32Kb DTCM
@@ -79,8 +80,49 @@ class SplitterAbstractPopulationVertexFixed(
         app_vertex.synapse_recorder.add_region_offset(
             len(app_vertex.neuron_recorder.get_recordable_variables()))
 
-        max_atoms_per_core = min(
-            app_vertex.get_max_atoms_per_core(), app_vertex.n_atoms)
+        self.__create_slices()
+
+        max_atoms_per_core = min(app_vertex.get_max_atoms_per_core(), app_vertex.n_atoms)
+
+        ring_buffer_shifts = app_vertex.get_ring_buffer_shifts()
+        weight_scales = app_vertex.get_weight_scales(ring_buffer_shifts)
+        all_syn_block_sz = app_vertex.get_synapses_size(
+            max_atoms_per_core)
+        structural_sz = app_vertex.get_structural_dynamics_size(
+            max_atoms_per_core)
+        sdram = self.get_sdram_used_by_atoms(
+            max_atoms_per_core,
+            all_syn_block_sz, structural_sz)
+        synapse_regions = PopulationMachineVertex.SYNAPSE_REGIONS
+        synaptic_matrices = SynapticMatrices(
+            app_vertex, synapse_regions, 
+            max_atoms_per_core, 
+            weight_scales,
+            all_syn_block_sz)
+        neuron_data = NeuronData(app_vertex)
+
+        
+        
+        for index, vertex_slice in enumerate(self.__slices):
+            chip_counter.add_core(sdram)
+            label = f"{app_vertex.label}{vertex_slice}"
+            machine_vertex = self.create_machine_vertex(
+                vertex_slice, sdram, label,
+                structural_sz, ring_buffer_shifts, weight_scales,
+                index, max_atoms_per_core, synaptic_matrices, neuron_data)
+            self.governed_app_vertex.remember_machine_vertex(machine_vertex)
+     
+    
+    # create machine vertices when each slice's sizes may different.
+    
+    @overrides(AbstractSplitterCommon.create_machine_vertices_various_slice_size)
+    def create_machine_vertices_various_slice_size(self, chip_counter):
+        app_vertex = self.governed_app_vertex
+        app_vertex.synapse_recorder.add_region_offset(
+            len(app_vertex.neuron_recorder.get_recordable_variables()))
+
+        self.__create_slices()
+        max_atoms_per_core = min(max([_slice.n_atoms for _slice in self.__slices]), app_vertex.n_atoms)
 
         ring_buffer_shifts = app_vertex.get_ring_buffer_shifts()
         weight_scales = app_vertex.get_weight_scales(ring_buffer_shifts)
@@ -96,8 +138,7 @@ class SplitterAbstractPopulationVertexFixed(
             all_syn_block_sz)
         neuron_data = NeuronData(app_vertex)
 
-        self.__create_slices()
-
+           
         for index, vertex_slice in enumerate(self.__slices):
             chip_counter.add_core(sdram)
             label = f"{app_vertex.label}{vertex_slice}"
@@ -105,8 +146,8 @@ class SplitterAbstractPopulationVertexFixed(
                 vertex_slice, sdram, label,
                 structural_sz, ring_buffer_shifts, weight_scales,
                 index, max_atoms_per_core, synaptic_matrices, neuron_data)
-            self.governed_app_vertex.remember_machine_vertex(machine_vertex)
-
+            app_vertex.remember_machine_vertex(machine_vertex)
+                
     @overrides(AbstractSplitterCommon.get_in_coming_slices)
     def get_in_coming_slices(self):
         self.__create_slices()
@@ -294,12 +335,29 @@ class SplitterAbstractPopulationVertexFixed(
         self.__max_delay = None
         self.__expect_delay_extension = None
 
+    def create_slices_from_slice_lentghs(self, slice_lentghs=None):
+        if self.__slices is not None:
+            raise ValueError
+        app_vertex = self.governed_app_vertex
+        sum_slice_lengths = sum(slice_lentghs)
+        if sum_slice_lengths != app_vertex.n_atoms:
+                raise ValueError("Sum of Splitted Lengt hs Should Equal to 'n_atoms' (sum of splitted length = %d, n_atoms = %d)" % (sum_slice_lengths, app_vertex.n_atoms))
+        self.__slices = []
+        previous_slice_ending = -1
+        print("slice_lentghs = %s " % slice_lentghs)
+        for slice_length in slice_lentghs:
+            print("make slice [%d, %d]" % (previous_slice_ending + 1, previous_slice_ending + slice_length))
+            self.__slices.append(Slice(previous_slice_ending + 1, previous_slice_ending + slice_length))
+            previous_slice_ending = previous_slice_ending + slice_length
+        
+        
     def __create_slices(self):
         """
         Create slices if not already done.
         """
         if self.__slices is not None:
             return
+
         self.__slices = get_multidimensional_slices(self.governed_app_vertex)
 
     def __update_max_delay(self):
