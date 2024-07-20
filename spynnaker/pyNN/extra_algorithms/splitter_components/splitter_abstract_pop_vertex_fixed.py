@@ -37,6 +37,8 @@ from spynnaker.pyNN.models.neuron.synaptic_matrices import SynapticMatrices
 from spynnaker.pyNN.models.neuron.neuron_data import NeuronData
 from .abstract_spynnaker_splitter_delay import AbstractSpynnakerSplitterDelay
 from pacman.model.graphs.common import Slice
+from pacman.data import PacmanDataView
+
 
 # The maximum number of bits for the ring buffer index that are likely to
 # fit in DTCM (14-bits = 16,384 16-bit ring buffer entries = 32Kb DTCM
@@ -54,7 +56,8 @@ class SplitterAbstractPopulationVertexFixed(
         # The pre-calculated slices of the vertex
         "__slices",
         "__max_delay",
-        "__expect_delay_extension"
+        "__expect_delay_extension",
+        "__is_one_population_one_core"
     ]
 
     def __init__(self):
@@ -62,6 +65,7 @@ class SplitterAbstractPopulationVertexFixed(
         self.__slices = None
         self.__max_delay = None
         self.__expect_delay_extension = None
+        self.__is_one_population_one_core = False
 
     @overrides(AbstractSplitterCommon.set_governed_app_vertex)
     def set_governed_app_vertex(self, app_vertex):
@@ -79,8 +83,10 @@ class SplitterAbstractPopulationVertexFixed(
         app_vertex = self.governed_app_vertex
         app_vertex.synapse_recorder.add_region_offset(
             len(app_vertex.neuron_recorder.get_recordable_variables()))
-
+        # print("_slices",  self.__slices, len(self.__slices) if self.__slices != None else "None")
         self.__create_slices()
+
+        
 
         max_atoms_per_core = app_vertex.n_atoms # min(app_vertex.get_max_atoms_per_core(), app_vertex.n_atoms)
 
@@ -120,7 +126,6 @@ class SplitterAbstractPopulationVertexFixed(
         app_vertex = self.governed_app_vertex
         app_vertex.synapse_recorder.add_region_offset(
             len(app_vertex.neuron_recorder.get_recordable_variables()))
-
         self.__create_slices()
         max_atoms_per_core = min(max([_slice.n_atoms for _slice in self.__slices]), app_vertex.n_atoms)
 
@@ -350,15 +355,25 @@ class SplitterAbstractPopulationVertexFixed(
             self.__slices.append(Slice(previous_slice_ending + 1, previous_slice_ending + slice_length))
             previous_slice_ending = previous_slice_ending + slice_length
         
+    def set_one_population_one_core(self, is_one_population_one_core):
+        self.__is_one_population_one_core = True
         
     def __create_slices(self):
         """
         Create slices if not already done.
         """
         if self.__slices is not None:
+            #print(len(self.__slices), "Return")
             return
-
-        self.__slices = get_multidimensional_slices(self.governed_app_vertex)
+        specified_max_atoms_per_core = -1
+        specified_max_atoms_per_dimension_per_core = -1
+        if self.__is_one_population_one_core or PacmanDataView.get_is_set_max_atom_per_core_be_maximum():
+            # print(self.__is_one_population_one_core, PacmanDataView.get_is_set_max_atom_per_core_be_maximum())
+            specified_max_atoms_per_core = 10000
+            specified_max_atoms_per_dimension_per_core = 10000
+        # print("create slices!!", self)
+        self.__slices = get_multidimensional_slices(self.governed_app_vertex, specified_max_atoms_per_core, specified_max_atoms_per_dimension_per_core)
+        
 
     def __update_max_delay(self):
         # Find the maximum delay from incoming synapses

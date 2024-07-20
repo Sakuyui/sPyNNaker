@@ -320,8 +320,9 @@ class AbstractPopulationVertex(
 
     @overrides(PopulationApplicationVertex.get_max_atoms_per_core)
     def get_max_atoms_per_core(self):
+        #print("in AbstractPopulationVertex")
         max_atoms = super().get_max_atoms_per_core()
-
+        #print(f"max_atoms = {max_atoms}", f" self.__synapse_dynamics.absolute_max_atoms_per_core = { self.__synapse_dynamics.absolute_max_atoms_per_core}")
         # Dynamically adjust depending on the needs of the synapse dynamics
         return min(
             max_atoms, self.__synapse_dynamics.absolute_max_atoms_per_core)
@@ -329,15 +330,20 @@ class AbstractPopulationVertex(
     @overrides(
         PopulationApplicationVertex.get_max_atoms_per_dimension_per_core)
     def get_max_atoms_per_dimension_per_core(self):
+        #print("In get_max_atoms_per_dimension_per_core() in abstract_population_vertex.py")
         max_atoms = self.get_max_atoms_per_core()
+        #print(f"max_atoms = {max_atoms}")
 
         # If single dimensional, we can use the max atoms calculation
         if len(self.atoms_shape) == 1:
+            #print("Return in len(self.atoms_shape) == 1:",  (max_atoms, ))
             return (max_atoms, )
 
         # If not, the user has to be more specific if the total number of
         # atoms is not small enough to fit on one core
         max_per_dim = super().get_max_atoms_per_dimension_per_core()
+
+        #print(f"max_per_dim = {max_per_dim}")
 
         if numpy.prod(max_per_dim) > max_atoms:
             raise SpynnakerException(
